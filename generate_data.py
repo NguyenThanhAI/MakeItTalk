@@ -78,6 +78,8 @@ if __name__ == '__main__':
 
             source_landmarks = 255 * np.ones_like(source_image)
             landmarks = face_al.get_landmarks_from_image(source_image)
+            if landmarks is None:
+                continue
             if len(landmarks) != 1:
                 continue
             for landmark in landmarks:
