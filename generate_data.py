@@ -53,8 +53,12 @@ if __name__ == '__main__':
 
         length = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        while True:
+        counts = 0
 
+        while True:
+            counts += 1
+            if counts == 100:
+                break
             while True:
                 source_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
                 target_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
