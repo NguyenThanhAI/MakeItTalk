@@ -58,12 +58,10 @@ class ImageTranslation(object):
             self.predicted_target_image, _ = generator_network(inputs=tf.concat([self.source_image, self.target_landmarks], axis=3),
                                                                is_training=self.config.is_training,
                                                                reuse=False, scope="image_translation_module")
-            self.reconstruction_loss = l1_loss(source=self.target_image, predict=self.predicted_target_image)
             if self.config.use_cycle_loss:
                 self.predicted_source_image, _ = generator_network(inputs=tf.concat([self.predicted_target_image, self.source_landmarks], axis=3),
                                                                    is_training=self.config.is_training,
                                                                    reuse=True, scope="image_translation_module")
-                self.cycle_loss = l1_loss(source=self.source_image, predict=self.predicted_source_image)
         self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
         if self.config.use_cycle_loss:
             self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.source_landmarks], axis=0)
@@ -76,15 +74,11 @@ class ImageTranslation(object):
             self.output_perceptual_target_image, self.output_perceptual_predicted_target_image = tf.split(value=self.perceptual_pred_target_image,
                                                                                                           num_or_size_splits=2,
                                                                                                           axis=0)
-            self.perceptual_loss = l1_loss(source=self.output_perceptual_target_image, predict=self.output_perceptual_predicted_target_image)
         else:
             self.output_perceptual_target_image, self.output_perceptual_predicted_target_image, self.output_perceptual_source_image, self.output_perceptual_predicted_source_image = \
             tf.split(value=self.perceptual_pred_image,
                      num_or_size_splits=4,
                      axis=0)
-
-            self.perceptual_loss = l1_loss(source=self.output_perceptual_target_image, predict=self.output_perceptual_predicted_target_image) + \
-                l1_loss(source=self.output_perceptual_source_image, predict=self.output_perceptual_predicted_source_image)
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
