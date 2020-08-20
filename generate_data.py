@@ -81,7 +81,10 @@ if __name__ == '__main__':
             target_image = cv2.resize(target_image, dsize=(256, 256))
 
             source_landmarks = 255 * np.ones_like(source_image)
-            landmarks = face_al.get_landmarks_from_image(source_image)
+            try:
+                landmarks = face_al.get_landmarks_from_image(source_image)
+            except:
+                continue
             if landmarks is None:
                 continue
             if len(landmarks) != 1:
