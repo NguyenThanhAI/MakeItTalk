@@ -25,6 +25,8 @@ def get_args():
     parser.add_argument("--decay_rate", type=float, default=0.85)
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--lambda_a", type=float, default=1.)
+    parser.add_argument("--lambda_c", type=float, default=1.)
+    parser.add_argument("--lambda_g", type=float, default=100.)
     parser.add_argument("--use_cycle_loss", type=str2bool, default=False)
     parser.add_argument("--use_discriminator", type=str2bool, default=False)
     parser.add_argument("--weight_decay", type=float, default=1e-6)
@@ -66,6 +68,8 @@ if __name__ == '__main__':
                                     decay_rate=args.decay_rate,
                                     momentum=args.momentum,
                                     lambda_a=args.lambda_a,
+                                    lambda_c=args.lambda_c,
+                                    lambda_g=args.lambda_g,
                                     use_cycle_loss=args.use_cycle_loss,
                                     use_discriminator=args.use_discriminator,
                                     weight_decay=args.weight_decay,

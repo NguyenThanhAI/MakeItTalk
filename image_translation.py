@@ -18,7 +18,7 @@ from losses import l1_loss
 
 class ImageTranslationConfig(object):
     def __init__(self, input_size=256, learning_rate=5e-4, learning_rate_decay_type="exponential_decay",
-                 decay_steps=10000, decay_rate=0.9, momentum=0.9, lambda_a=1.,
+                 decay_steps=10000, decay_rate=0.9, momentum=0.9, lambda_a=1., lambda_c=1., lambda_g=100.,
                  use_cycle_loss=False, use_discriminator=True,
                  weight_decay=1e-6, is_loadmodel=False,
                  per_process_gpu_memory_fraction=1.0,
@@ -35,6 +35,8 @@ class ImageTranslationConfig(object):
         self.decay_rate = decay_rate
         self.momentum = momentum
         self.lambda_a = lambda_a
+        self.lambda_c = lambda_c
+        self.lambda_g = lambda_g
         self.use_cycle_loss = use_cycle_loss
         self.use_discriminator = use_discriminator
         self.weight_decay = weight_decay
@@ -146,7 +148,7 @@ class ImageTranslation(object):
                     else:
                         self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
                         tf.summary.scalar("generator adversarial loss", self.gen_adv_loss)
-                        self.generator_loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
+                        self.generator_loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.lambda_g * self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
                     tf.summary.scalar("total loss", self.generator_loss)
                 else:
                     self.perceptual_loss = 0
@@ -159,11 +161,11 @@ class ImageTranslation(object):
                     self.cycle_loss = l1_loss(source=self.source_image, predict=self.predicted_source_image)
                     tf.summary.scalar("cycle loss", self.cycle_loss)
                     if not self.config.use_discriminator:
-                        self.generator_loss = self.reconstruction_loss + self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.generator_regularization_loss
+                        self.generator_loss = self.reconstruction_loss + self.config.lambda_c * self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.generator_regularization_loss
                     else:
                         self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
                         tf.summary.scalar("generator adversarial loss", self.gen_adv_loss)
-                        self.generator_loss = self.reconstruction_loss + self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
+                        self.generator_loss = self.reconstruction_loss + self.config.lambda_c * self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.config.lambda_g * self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
                     tf.summary.scalar("total loss", self.generator_loss)
 
             if self.config.use_discriminator:
