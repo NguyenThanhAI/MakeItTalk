@@ -132,6 +132,51 @@ def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_eps
             return scope
 
 
+def discriminator_network(inputs, dropout_rate=None, is_training=True, reuse=None, scope=None):
+    with tf.variable_scope(scope, "discriminator", [inputs], reuse=reuse) as sc:
+        end_points_collection = sc.name + "_end_points"
+
+        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training), \
+            slim.arg_scope([slim.conv2d, conv], outputs_collections=end_points_collection), \
+            slim.arg_scope([conv], dropout_rate=dropout_rate):
+
+            net = inputs
+
+            net = conv(inputs=net, num_filters=64, kernel_size=5, stride=2, scope="conv_1")
+
+            net = conv(inputs=net, num_filters=128, kernel_size=5, stride=2, scope="conv_2")
+
+            net = conv(inputs=net, num_filters=256, kernel_size=5, stride=2, scope="conv_3")
+
+            net = conv(inputs=net, num_filters=512, kernel_size=5, stride=2, scope="conv_4")
+
+            net = conv(inputs=net, num_filters=1024, kernel_size=5, stride=2, scope="conv_5")
+
+            net = slim.flatten(net)
+
+            net = slim.fully_connected(inputs=net, num_outputs=1024, activation_fn=tf.nn.relu)
+
+            net = slim.fully_connected(inputs=net, num_outputs=1, activation_fn=None)
+
+            net = tf.nn.sigmoid(net)
+
+            end_points = slim.utils.convert_collection_to_dict(end_points_collection)
+
+            return net, end_points
+
+
+def discriminator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_epsilon=1.1e-5):
+    with slim.arg_scope([slim.conv2d],
+                        weights_regularizer=slim.l2_regularizer(scale=weight_decay),
+                        activation_fn=None,
+                        biases_initializer=None):
+        with slim.arg_scope([slim.batch_norm],
+                            scale=True,
+                            decay=batch_norm_decay,
+                            epsilon=batch_norm_epsilon) as scope:
+            return scope
+
+
 #with slim.arg_scope(generator_arg_scope()):
 #    generator = generator_network
 #
@@ -149,3 +194,20 @@ def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_eps
 #    print(out, out.shape)
 #
 #from tensorflow.contrib.slim.nets import vgg
+
+
+#with slim.arg_scope(discriminator_arg_scope()):
+#    discriminator = discriminator_network
+#
+#inputs = tf.placeholder(dtype=tf.float32, shape=[None, 256, 256, 3])
+#feed_inputs = np.random.rand(5, 256, 256, 3)
+#output, _ = discriminator(inputs=inputs)
+#
+#initializer = tf.global_variables_initializer()
+#
+#with tf.Session() as sess:
+#    sess.run(initializer)
+#
+#    out = sess.run(output, feed_dict={inputs: feed_inputs})
+#
+#    print(out, out.shape)
