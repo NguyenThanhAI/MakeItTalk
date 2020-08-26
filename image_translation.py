@@ -64,12 +64,12 @@ class ImageTranslation(object):
                                                                    reuse=True, scope="image_translation_module")
         self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
         if self.config.use_cycle_loss:
-            self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.source_landmarks], axis=0)
+            self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.predicted_source_image], axis=0)
         with slim.arg_scope(nets.vgg.vgg_arg_scope()):
             if not self.config.use_cycle_loss:
-                self.perceptual_pred_target_image = nets.vgg.vgg_19(inputs=self.perceptual_target_image, is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
+                self.perceptual_pred_target_image = nets.vgg.vgg_19(inputs=tf.add(tf.multiply(self.perceptual_target_image, 127.5 * tf.ones_like(self.perceptual_target_image)), 127.5 * tf.ones_like(self.perceptual_target_image)), is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
             else:
-                self.perceptual_pred_image = nets.vgg.vgg_19(inputs=self.perceptual_image, is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
+                self.perceptual_pred_image = nets.vgg.vgg_19(inputs=tf.add(tf.multiply(self.perceptual_image, 127.5 * tf.ones_like(self.perceptual_image)), 127.5 * tf.ones_like(self.perceptual_image)), is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
         if not self.config.use_cycle_loss:
             self.output_perceptual_target_image, self.output_perceptual_predicted_target_image = tf.split(value=self.perceptual_pred_target_image,
                                                                                                           num_or_size_splits=2,
