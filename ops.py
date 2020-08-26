@@ -113,7 +113,7 @@ def generator_network(inputs, dropout_rate=None, is_training=True, reuse=None, s
 
             up_6 = residual_block_up(inputs=tf.concat([down_1, up_5], axis=-1), num_filters=3, kernel_size=3, scope="residual_block_up_" + str(6)) # 256
 
-            out = 255 * tf.nn.sigmoid(up_6)
+            out = tf.nn.tanh(up_6)
 
             end_points = slim.utils.convert_collection_to_dict(end_points_collection)
 

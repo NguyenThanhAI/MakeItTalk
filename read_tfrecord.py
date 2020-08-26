@@ -15,15 +15,19 @@ def _parse_fn(data_record):
     source_image = tf.image.decode_jpeg(sample["source_image"])
     source_image = tf.cast(source_image, dtype=tf.float32)
     source_image.set_shape(shape=[256, 256, 3])
+    source_image = tf.divide(tf.subtract(source_image, 127.5 * tf.ones_like(source_image)), 127.5 * tf.ones_like(source_image))
     target_image = tf.image.decode_jpeg(sample["target_image"])
     target_image = tf.cast(target_image, dtype=tf.float32)
     target_image.set_shape(shape=[256, 256, 3])
+    target_image = tf.divide(tf.subtract(target_image, 127.5 * tf.ones_like(target_image)), 127.5 * tf.ones_like(target_image))
     source_landmarks = tf.image.decode_jpeg(sample["source_landmarks"])
     source_landmarks = tf.cast(source_landmarks, dtype=tf.float32)
     source_landmarks.set_shape(shape=[256, 256, 3])
+    source_landmarks = tf.divide(tf.subtract(source_landmarks, 127.5 * tf.ones_like(source_landmarks)), 127.5 * tf.ones_like(source_landmarks))
     target_landmarks = tf.image.decode_jpeg(sample["target_landmarks"])
     target_landmarks = tf.cast(target_landmarks, dtype=tf.float32)
     target_landmarks.set_shape(shape=[256, 256, 3])
+    target_landmarks = tf.divide(tf.subtract(target_landmarks, 127.5 * tf.ones_like(target_landmarks)), 127.5 * tf.ones_like(target_landmarks))
 
     return source_image, target_image, source_landmarks, target_landmarks
 
@@ -53,10 +57,10 @@ def get_batch(tfrecord_path, batch_size, num_epochs=100):
 ##source_image, target_image, source_landmarks, target_landmarks, epoch_now = iterator.get_next()
 #source_image, target_image, source_landmarks, target_landmarks, epoch_now = get_batch(r"D:\Face_Animation\tfrecord\training.tfrecord", 1, 100)
 #
-#source_image = tf.cast(source_image, dtype=tf.uint8)
-#target_image = tf.cast(target_image, dtype=tf.uint8)
-#source_landmarks = tf.cast(source_landmarks, dtype=tf.uint8)
-#target_landmarks = tf.cast(target_landmarks, dtype=tf.uint8)
+#source_image = tf.cast(tf.add(tf.multiply(source_image, 127.5 * tf.ones_like(source_image)), 127.5 * tf.ones_like(source_image)), dtype=tf.uint8)
+#target_image = tf.cast(tf.add(tf.multiply(target_image, 127.5 * tf.ones_like(target_image)), 127.5 * tf.ones_like(target_image)), dtype=tf.uint8)
+#source_landmarks = tf.cast(tf.add(tf.multiply(source_landmarks, 127.5 * tf.ones_like(source_landmarks)), 127.5 * tf.ones_like(source_landmarks)), dtype=tf.uint8)
+#target_landmarks = tf.cast(tf.add(tf.multiply(target_landmarks, 127.5 * tf.ones_like(target_landmarks)), 127.5 * tf.ones_like(target_landmarks)), dtype=tf.uint8)
 #
 #
 #

@@ -115,11 +115,11 @@ class ImageTranslation(object):
                 tf.summary.scalar("total loss", self.loss)
 
         with tf.name_scope("image"):
-            tf.summary.image("source image", tf.cast(self.source_image, dtype=tf.uint8))
-            tf.summary.image("target image", tf.cast(self.target_image, dtype=tf.uint8))
+            tf.summary.image("source image", tf.cast(tf.add(tf.multiply(self.source_image, 127.5 * tf.ones_like(self.source_image)), 127.5 * tf.ones_like(self.source_image)), dtype=tf.uint8))
+            tf.summary.image("target image", tf.cast(tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image)), dtype=tf.uint8))
             if self.config.use_cycle_loss:
-                tf.summary.image("predicted source image", tf.cast(self.predicted_source_image, dtype=tf.uint8))
-            tf.summary.image("predicted target image", tf.cast(self.predicted_target_image, tf.uint8))
+                tf.summary.image("predicted source image", tf.cast(tf.add(tf.multiply(self.predicted_source_image, 127.5 * tf.ones_like(self.predicted_source_image)), 127.5 * tf.ones_like(self.predicted_source_image)), dtype=tf.uint8))
+            tf.summary.image("predicted target image", tf.cast(tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image)), tf.uint8))
 
         with tf.name_scope("optimizer"):
             if self.config.learning_rate_decay_type == "constant":
