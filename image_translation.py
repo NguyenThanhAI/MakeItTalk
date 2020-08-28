@@ -81,13 +81,13 @@ class ImageTranslation(object):
         #             num_or_size_splits=4,
         #             axis=0)
         if not self.config.use_cycle_loss:
-            self.output_perceptual_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_target_image = inference(images=self.target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = inference(images=self.predicted_target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
         else:
-            self.output_perceptual_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
-            self.output_perceptual_source_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.source_image, 127.5 * tf.ones_like(self.source_image)), 127.5 * tf.ones_like(self.source_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
-            self.output_perceptual_predicted_source_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_source_image, 127.5 * tf.ones_like(self.predicted_source_image)), 127.5 * tf.ones_like(self.predicted_source_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_target_image = inference(images=self.target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = inference(images=self.predicted_target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_source_image = inference(images=self.source_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_predicted_source_image = inference(images=self.predicted_source_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
