@@ -84,13 +84,13 @@ class ImageTranslation(object):
         #             num_or_size_splits=4,
         #             axis=0)
         if not self.config.use_cycle_loss:
-            self.output_perceptual_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), is_training=False, spatial_squeeze=False, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_target_image = vgg_19(inputs=self.target_image, is_training=False, spatial_squeeze=False, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = vgg_19(inputs=self.predicted_target_image, is_training=False, spatial_squeeze=False, reuse=True)[1]
         else:
-            self.output_perceptual_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), is_training=False, spatial_squeeze=False, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
-            self.output_perceptual_source_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.source_image, 127.5 * tf.ones_like(self.source_image)), 127.5 * tf.ones_like(self.source_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
-            self.output_perceptual_predicted_source_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_source_image, 127.5 * tf.ones_like(self.predicted_source_image)), 127.5 * tf.ones_like(self.predicted_source_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_target_image = vgg_19(inputs=self.target_image, is_training=False, spatial_squeeze=False, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = vgg_19(inputs=self.predicted_target_image, is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_source_image = vgg_19(inputs=self.source_image, is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_predicted_source_image = vgg_19(inputs=self.predicted_source_image, is_training=False, spatial_squeeze=False, reuse=True)[1]
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
