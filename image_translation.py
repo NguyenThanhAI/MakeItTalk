@@ -6,6 +6,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import slim
 from tensorflow.contrib.slim import nets
+from vgg import vgg_19
+from vgg_preprocessing import _R_MEAN, _G_MEAN, _B_MEAN, _mean_image_subtraction
+
 from inception_resnet_v1 import inference
 
 from ops import generator_arg_scope, generator_network
@@ -81,13 +84,13 @@ class ImageTranslation(object):
         #             num_or_size_splits=4,
         #             axis=0)
         if not self.config.use_cycle_loss:
-            self.output_perceptual_target_image = inference(images=self.target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = inference(images=self.predicted_target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), is_training=False, spatial_squeeze=False, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
         else:
-            self.output_perceptual_target_image = inference(images=self.target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
-            self.output_perceptual_predicted_target_image = inference(images=self.predicted_target_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
-            self.output_perceptual_source_image = inference(images=self.source_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
-            self.output_perceptual_predicted_source_image = inference(images=self.predicted_source_image, phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), is_training=False, spatial_squeeze=False, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_source_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.source_image, 127.5 * tf.ones_like(self.source_image)), 127.5 * tf.ones_like(self.source_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
+            self.output_perceptual_predicted_source_image = vgg_19(inputs=tf.map_fn(fn=lambda x: _mean_image_subtraction(x, [_R_MEAN, _G_MEAN, _B_MEAN]), elems=tf.add(tf.multiply(self.predicted_source_image, 127.5 * tf.ones_like(self.predicted_source_image)), 127.5 * tf.ones_like(self.predicted_source_image))), is_training=False, spatial_squeeze=False, reuse=True)[1]
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
@@ -97,7 +100,7 @@ class ImageTranslation(object):
                                                                scope="image_translation_module")
         #print("self.generator_trainable_variables: {}".format(self.generator_trainable_variables))
         self.generator_saver = tf.train.Saver(var_list=self.generator_trainable_variables + [self.global_step])
-        self.vgg_variables = tf.get_collection(key=tf.GraphKeys.GLOBAL_VARIABLES, scope="InceptionResnetV1")
+        self.vgg_variables = tf.get_collection(key=tf.GraphKeys.GLOBAL_VARIABLES, scope="vgg_19")
         #print("self.vgg_variables: {}".format(self.vgg_variables))
         self.vgg_saver = tf.train.Saver(var_list=self.vgg_variables)
 
@@ -106,7 +109,7 @@ class ImageTranslation(object):
             tf.summary.scalar("regularization loss", self.regularization_loss)
             self.reconstruction_loss = l1_loss(source=self.target_image, predict=self.predicted_target_image)
             tf.summary.scalar("reconstruction loss", self.reconstruction_loss)
-            considered_end_points = ["Conv2d_1a_3x3", "Conv2d_2b_3x3", "Conv2d_3b_1x1", "Conv2d_4a_3x3", "Mixed_5a"]
+            considered_end_points = ["vgg_19/conv1/conv1_2", "vgg_19/conv2/conv2_2", "vgg_19/conv3/conv3_3", "vgg_19/conv4/conv4_3", "vgg_19/conv5/conv5_3"]
             if not self.config.use_cycle_loss:
                 self.perceptual_loss = 0
                 for point in considered_end_points:
