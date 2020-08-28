@@ -63,23 +63,31 @@ class ImageTranslation(object):
                 self.predicted_source_image, _ = generator_network(inputs=tf.concat([self.predicted_target_image, self.source_landmarks], axis=3),
                                                                    is_training=self.config.is_training,
                                                                    reuse=True, scope="image_translation_module")
-        self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
-        if self.config.use_cycle_loss:
-            self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.predicted_source_image], axis=0)
+        #self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
+        #if self.config.use_cycle_loss:
+        #    self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.predicted_source_image], axis=0)
         #with slim.arg_scope(nets.vgg.vgg_arg_scope()):
+        #if not self.config.use_cycle_loss:
+        #    self.perceptual_pred_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_target_image, 127.5 * tf.ones_like(self.perceptual_target_image)), 127.5 * tf.ones_like(self.perceptual_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
+        #else:
+        #    self.perceptual_pred_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_image, 127.5 * tf.ones_like(self.perceptual_image)), 127.5 * tf.ones_like(self.perceptual_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
+        #if not self.config.use_cycle_loss:
+        #    self.output_perceptual_target_image, self.output_perceptual_predicted_target_image = tf.split(value=self.perceptual_pred_target_image,
+        #                                                                                                  num_or_size_splits=2,
+        #                                                                                                  axis=0)
+        #else:
+        #    self.output_perceptual_target_image, self.output_perceptual_predicted_target_image, self.output_perceptual_source_image, self.output_perceptual_predicted_source_image = \
+        #    tf.split(value=self.perceptual_pred_image,
+        #             num_or_size_splits=4,
+        #             axis=0)
         if not self.config.use_cycle_loss:
-            self.perceptual_pred_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_target_image, 127.5 * tf.ones_like(self.perceptual_target_image)), 127.5 * tf.ones_like(self.perceptual_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
+            self.output_perceptual_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
         else:
-            self.perceptual_pred_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_image, 127.5 * tf.ones_like(self.perceptual_image)), 127.5 * tf.ones_like(self.perceptual_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
-        if not self.config.use_cycle_loss:
-            self.output_perceptual_target_image, self.output_perceptual_predicted_target_image = tf.split(value=self.perceptual_pred_target_image,
-                                                                                                          num_or_size_splits=2,
-                                                                                                          axis=0)
-        else:
-            self.output_perceptual_target_image, self.output_perceptual_predicted_target_image, self.output_perceptual_source_image, self.output_perceptual_predicted_source_image = \
-            tf.split(value=self.perceptual_pred_image,
-                     num_or_size_splits=4,
-                     axis=0)
+            self.output_perceptual_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.target_image, 127.5 * tf.ones_like(self.target_image)), 127.5 * tf.ones_like(self.target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=False)[1]
+            self.output_perceptual_predicted_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_target_image, 127.5 * tf.ones_like(self.predicted_target_image)), 127.5 * tf.ones_like(self.predicted_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_source_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.source_image, 127.5 * tf.ones_like(self.source_image)), 127.5 * tf.ones_like(self.source_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
+            self.output_perceptual_predicted_source_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.predicted_source_image, 127.5 * tf.ones_like(self.predicted_source_image)), 127.5 * tf.ones_like(self.predicted_source_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512, reuse=True)[1]
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
@@ -98,17 +106,22 @@ class ImageTranslation(object):
             tf.summary.scalar("regularization loss", self.regularization_loss)
             self.reconstruction_loss = l1_loss(source=self.target_image, predict=self.predicted_target_image)
             tf.summary.scalar("reconstruction loss", self.reconstruction_loss)
+            considered_end_points = ["Conv2d_1a_3x3", "Conv2d_2b_3x3", "Conv2d_3b_1x1", "Conv2d_4a_3x3", "Mixed_5a"]
             if not self.config.use_cycle_loss:
-                self.perceptual_loss = l1_loss(source=self.output_perceptual_target_image,
-                                               predict=self.output_perceptual_predicted_target_image)
+                self.perceptual_loss = 0
+                for point in considered_end_points:
+                    self.perceptual_loss += l1_loss(source=self.output_perceptual_target_image[point],
+                                                    predict=self.output_perceptual_predicted_target_image[point])
                 tf.summary.scalar("perceptual loss", self.perceptual_loss)
-                self.loss = self.reconstruction_loss + self.config.weight_decay * self.regularization_loss
+                self.loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.regularization_loss
                 tf.summary.scalar("total loss", self.loss)
             else:
-                self.perceptual_loss = l1_loss(source=self.output_perceptual_target_image,
-                                               predict=self.output_perceptual_predicted_target_image) + \
-                                       l1_loss(source=self.output_perceptual_source_image,
-                                               predict=self.output_perceptual_predicted_source_image)
+                self.perceptual_loss = 0
+                for point in considered_end_points:
+                    self.perceptual_loss += l1_loss(source=self.output_perceptual_target_image[point],
+                                                    predict=self.output_perceptual_predicted_target_image[point]) + \
+                                            l1_loss(source=self.output_perceptual_source_image[point],
+                                                    predict=self.output_perceptual_predicted_source_image[point])
                 tf.summary.scalar("perceptual loss", self.perceptual_loss)
                 self.cycle_loss = l1_loss(source=self.source_image, predict=self.predicted_source_image)
                 tf.summary.scalar("cycle loss", self.cycle_loss)
