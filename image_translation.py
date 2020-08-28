@@ -6,6 +6,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import slim
 from tensorflow.contrib.slim import nets
+from inception_resnet_v1 import inference
 
 from ops import generator_arg_scope, generator_network
 from read_tfrecord import get_batch
@@ -65,11 +66,11 @@ class ImageTranslation(object):
         self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
         if self.config.use_cycle_loss:
             self.perceptual_image = tf.concat([self.target_image, self.predicted_target_image, self.source_image, self.predicted_source_image], axis=0)
-        with slim.arg_scope(nets.vgg.vgg_arg_scope()):
-            if not self.config.use_cycle_loss:
-                self.perceptual_pred_target_image = nets.vgg.vgg_19(inputs=self.perceptual_target_image, is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
-            else:
-                self.perceptual_pred_image = nets.vgg.vgg_19(inputs=self.perceptual_image, is_training=False, spatial_squeeze=False)[1]["vgg_19/conv5/conv5_4"]
+        #with slim.arg_scope(nets.vgg.vgg_arg_scope()):
+        if not self.config.use_cycle_loss:
+            self.perceptual_pred_target_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_target_image, 127.5 * tf.ones_like(self.perceptual_target_image)), 127.5 * tf.ones_like(self.perceptual_target_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
+        else:
+            self.perceptual_pred_image = inference(images=tf.map_fn(fn=lambda x: tf.image.per_image_standardization(x), elems=tf.add(tf.multiply(self.perceptual_image, 127.5 * tf.ones_like(self.perceptual_image)), 127.5 * tf.ones_like(self.perceptual_image))), phase_train=False, keep_probability=1., bottleneck_layer_size=512)[1]["Mixed_5a"]
         if not self.config.use_cycle_loss:
             self.output_perceptual_target_image, self.output_perceptual_predicted_target_image = tf.split(value=self.perceptual_pred_target_image,
                                                                                                           num_or_size_splits=2,
@@ -88,7 +89,7 @@ class ImageTranslation(object):
                                                                scope="image_translation_module")
         #print("self.generator_trainable_variables: {}".format(self.generator_trainable_variables))
         self.generator_saver = tf.train.Saver(var_list=self.generator_trainable_variables + [self.global_step])
-        self.vgg_variables = tf.get_collection(key=tf.GraphKeys.GLOBAL_VARIABLES, scope="vgg_19")
+        self.vgg_variables = tf.get_collection(key=tf.GraphKeys.GLOBAL_VARIABLES, scope="InceptionResnetV1")
         #print("self.vgg_variables: {}".format(self.vgg_variables))
         self.vgg_saver = tf.train.Saver(var_list=self.vgg_variables)
 
