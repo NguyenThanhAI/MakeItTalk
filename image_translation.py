@@ -114,6 +114,20 @@ class ImageTranslation(object):
                 self.real_outputs, _ = discriminator_network(inputs=self.real_inputs, is_training=True,
                                                              reuse=True, scope="discriminator")
 
+        if self.config.use_discriminator:
+            if self.config.use_cycle_loss:
+                self.fake_inputs = tf.concat([self.predicted_target_image, self.predicted_source_image], axis=0)
+                self.real_inputs = tf.concat([self.target_image, self.source_image], axis=0)
+            else:
+                self.fake_inputs = self.predicted_target_image
+                self.real_inputs = self.target_image
+
+            with slim.arg_scope(discriminator_arg_scope()):
+                self.fake_outputs, _ = discriminator_network(inputs=self.fake_inputs, is_training=True,
+                                                             reuse=False, scope="discriminator")
+                self.real_outputs, _ = discriminator_network(inputs=self.real_inputs, is_training=True,
+                                                             reuse=True, scope="discriminator")
+
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
             tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES)
