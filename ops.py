@@ -6,10 +6,12 @@ from tensorflow.contrib import image
 
 @slim.add_arg_scope
 def conv(inputs, num_filters, kernel_size, stride=1,
-         dropout_rate=None, scope=None, outputs_collections=None, is_relu=True):
+         dropout_rate=None, scope=None, outputs_collections=None, is_relu=True, use_batchnorm=True):
     with tf.variable_scope(scope, "xx", [inputs]) as sc:
         net = slim.conv2d(inputs=inputs, num_outputs=num_filters, kernel_size=kernel_size, stride=stride)
-        net = slim.batch_norm(inputs=net)
+
+        if use_batchnorm:
+            net = slim.batch_norm(inputs=net)
 
         if is_relu:
             net = tf.nn.relu(net)
@@ -132,13 +134,14 @@ def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_eps
             return scope
 
 
-def discriminator_network(inputs, dropout_rate=None, is_training=True, reuse=None, scope=None):
+def discriminator_network(inputs, dropout_rate=None, is_training=True, reuse=None, scope=None, use_batchnorm=False,
+                          use_wgan_gp=True):
     with tf.variable_scope(scope, "discriminator", [inputs], reuse=reuse) as sc:
         end_points_collection = sc.name + "_end_points"
 
         with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training), \
             slim.arg_scope([slim.conv2d, conv], outputs_collections=end_points_collection), \
-            slim.arg_scope([conv], dropout_rate=dropout_rate):
+            slim.arg_scope([conv], dropout_rate=dropout_rate, use_batchnorm=use_batchnorm):
 
             net = inputs
 
@@ -158,7 +161,10 @@ def discriminator_network(inputs, dropout_rate=None, is_training=True, reuse=Non
 
             net = slim.fully_connected(inputs=net, num_outputs=1, activation_fn=None)
 
-            net = tf.nn.sigmoid(net)
+            if not use_wgan_gp:
+                net = tf.nn.sigmoid(net)
+            else:
+                net = tf.nn.tanh(net)
 
             end_points = slim.utils.convert_collection_to_dict(end_points_collection)
 

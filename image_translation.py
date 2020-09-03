@@ -19,7 +19,7 @@ from losses import l1_loss
 class ImageTranslationConfig(object):
     def __init__(self, input_size=256, learning_rate=5e-4, learning_rate_decay_type="exponential_decay",
                  decay_steps=10000, decay_rate=0.9, momentum=0.9, lambda_a=1., lambda_c=1., lambda_g=100.,
-                 use_cycle_loss=False, use_discriminator=True,
+                 use_cycle_loss=False, use_discriminator=True, use_wgan_gp=True, n_critic=5, lambda_e=10,
                  weight_decay=1e-6, is_loadmodel=False,
                  per_process_gpu_memory_fraction=1.0,
                  summary_dir="./summary", model_dir="./saved_model",
@@ -39,6 +39,9 @@ class ImageTranslationConfig(object):
         self.lambda_g = lambda_g
         self.use_cycle_loss = use_cycle_loss
         self.use_discriminator = use_discriminator
+        self.use_wgan_gp = use_wgan_gp
+        self.n_critic = n_critic
+        self.lambda_e = lambda_e
         self.weight_decay = weight_decay
         self.is_loadmodel = is_loadmodel
         self.per_process_gpu_memory_fraction = per_process_gpu_memory_fraction
@@ -108,11 +111,27 @@ class ImageTranslation(object):
                 self.fake_inputs = self.predicted_target_image
                 self.real_inputs = self.target_image
 
+            if self.config.use_wgan_gp:
+                if not self.config.use_cycle_loss:
+                    self.epsilon = tf.random.uniform(shape=[self.config.batch_size, 1, 1, 1], minval=0, maxval=1, dtype=tf.float32)
+                else:
+                    self.epsilon = tf.random.uniform(shape=[self.config.batch_size * 2, 1, 1, 1], minval=0, maxval=1, dtype=tf.float32)
+
             with slim.arg_scope(discriminator_arg_scope()):
                 self.fake_outputs, _ = discriminator_network(inputs=self.fake_inputs, is_training=True,
-                                                             reuse=False, scope="discriminator")
+                                                             reuse=False, scope="discriminator", use_batchnorm=False,
+                                                             use_wgan_gp=self.config.use_wgan_gp)
                 self.real_outputs, _ = discriminator_network(inputs=self.real_inputs, is_training=True,
-                                                             reuse=True, scope="discriminator")
+                                                             reuse=True, scope="discriminator", use_batchnorm=False,
+                                                             use_wgan_gp=self.config.use_wgan_gp)
+                if self.config.use_wgan_gp:
+                    self.x_hat = self.epsilon * self.real_inputs + (tf.ones_like(self.epsilon) - self.epsilon) * self.fake_inputs
+                    self.x_hat_out, _ = discriminator_network(inputs=self.x_hat, is_training=True,
+                                                              reuse=True, scope="discriminator", use_batchnorm=False,
+                                                              use_wgan_gp=self.config.use_wgan_gp)
+                    self.gradient = tf.gradients(ys=self.x_hat_out, xs=[self.x_hat])[0]
+                    self.gradient_norm = tf.sqrt(tf.reduce_sum(tf.square(self.gradient), axis=[1, 2, 3]))
+                    self.gradient_penalty = tf.reduce_mean(tf.square(self.gradient_norm - tf.ones_like(self.gradient_norm)))
 
         self.global_step = tf.train.get_or_create_global_step()
         self.global_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) + \
@@ -146,7 +165,10 @@ class ImageTranslation(object):
                     if not self.config.use_discriminator:
                         self.generator_loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.generator_regularization_loss
                     else:
-                        self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
+                        if not self.config.use_wgan_gp:
+                            self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
+                        else:
+                            self.gen_adv_loss = - tf.reduce_mean(self.fake_outputs)
                         tf.summary.scalar("generator adversarial loss", self.gen_adv_loss)
                         self.generator_loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.lambda_g * self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
                     tf.summary.scalar("total loss", self.generator_loss)
@@ -163,7 +185,10 @@ class ImageTranslation(object):
                     if not self.config.use_discriminator:
                         self.generator_loss = self.reconstruction_loss + self.config.lambda_c * self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.generator_regularization_loss
                     else:
-                        self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
+                        if not self.config.use_wgan_gp:
+                            self.gen_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs - tf.ones_like(self.fake_outputs)))
+                        else:
+                            self.gen_adv_loss = - tf.reduce_mean(self.fake_outputs)
                         tf.summary.scalar("generator adversarial loss", self.gen_adv_loss)
                         self.generator_loss = self.reconstruction_loss + self.config.lambda_c * self.cycle_loss + self.config.lambda_a * self.perceptual_loss + self.config.lambda_g * self.gen_adv_loss + self.config.weight_decay * self.generator_regularization_loss
                     tf.summary.scalar("total loss", self.generator_loss)
@@ -172,7 +197,11 @@ class ImageTranslation(object):
                 with tf.name_scope("discriminator"):
                     self.discriminator_regularization_loss = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in self.discriminator_trainable_variables])
                     tf.summary.scalar("discriminator regularization loss", self.discriminator_regularization_loss)
-                    self.dis_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs)) + tf.reduce_mean(0.5 * tf.square(self.real_outputs - tf.ones_like(self.real_outputs)))
+                    if not self.config.use_wgan_gp:
+                        self.dis_adv_loss = tf.reduce_mean(0.5 * tf.square(self.fake_outputs)) + tf.reduce_mean(0.5 * tf.square(self.real_outputs - tf.ones_like(self.real_outputs)))
+                    else:
+                        self.dis_adv_loss = tf.reduce_mean(self.fake_outputs) - tf.reduce_mean(self.real_outputs) + self.config.lambda_e * self.gradient_penalty
+                        tf.summary.scalar("critic gradient penalty", self.gradient_penalty)
                     tf.summary.scalar("discriminator adversarial loss", self.dis_adv_loss)
                     self.discriminator_loss = self.dis_adv_loss + self.config.weight_decay * self.discriminator_regularization_loss
                     tf.summary.scalar("discriminator loss", self.discriminator_loss)
@@ -203,9 +232,9 @@ class ImageTranslation(object):
                                                                   decay_steps=self.config.decay_steps)
             tf.summary.scalar("learning rate", self.learning_rate)
             if self.config.optimizer.lower() == "adam":
-                self.generator_optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate)
+                self.generator_optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate, beta1=0, beta2=0.9)
                 if self.config.use_discriminator:
-                    self.discriminator_optimizer = tf.train.AdamOptimizer(learning_rate=self.config.dis_gen_learning_rate_ratio * self.config.learning_rate)
+                    self.discriminator_optimizer = tf.train.AdamOptimizer(learning_rate=self.config.dis_gen_learning_rate_ratio * self.config.learning_rate, beta1=0, beta2=0.9)
             elif self.config.optimizer.lower() == "rms" and self.config.optimizer.lower() == "rmsprop":
                 self.generator_optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
                 if self.config.use_discriminator:
@@ -292,9 +321,14 @@ class ImageTranslation(object):
                 _, gen_cost, epoch = self.sess.run([self.generator_train_op, self.generator_loss, self.epoch_now])
                 global_step = self.get_global_step()
                 if self.config.use_discriminator:
-                    if global_step % self.config.discriminator_update_steps == 0:
-                        _, dis_cost = self.sess.run([self.discriminator_train_op, self.discriminator_loss])
-                        print("Discriminator loss: {},".format(np.round(dis_cost, 3)), end=" ")
+                    if not self.config.use_wgan_gp:
+                        if global_step % self.config.discriminator_update_steps == 0:
+                            _, dis_cost = self.sess.run([self.discriminator_train_op, self.discriminator_loss])
+                            print("Discriminator loss: {},".format(np.round(dis_cost, 3)), end=" ")
+                    else:
+                        for j in range(self.config.n_critic):
+                            _, dis_cost = self.sess.run([self.discriminator_train_op, self.discriminator_loss])
+                            print("Discriminator loss time {}: {},".format(j + 1, np.round(dis_cost, 3)), end=" ")
                 if global_step % self.config.summary_frequency == 0:
                     self.add_summary(global_step=global_step)
                 if global_step % self.config.save_network_frequency == 0:

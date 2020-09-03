@@ -29,6 +29,9 @@ def get_args():
     parser.add_argument("--lambda_g", type=float, default=100.)
     parser.add_argument("--use_cycle_loss", type=str2bool, default=False)
     parser.add_argument("--use_discriminator", type=str2bool, default=False)
+    parser.add_argument("--use_wgan_gp", type=str2bool, default=True)
+    parser.add_argument("--n_critic", type=int, default=5)
+    parser.add_argument("--lambda_e", type=float, default=10.)
     parser.add_argument("--weight_decay", type=float, default=1e-6)
     parser.add_argument("--is_loadmodel", type=str2bool, default=False)
     parser.add_argument("--per_process_gpu_memory_fraction", type=float, default=1.0)
@@ -72,6 +75,9 @@ if __name__ == '__main__':
                                     lambda_g=args.lambda_g,
                                     use_cycle_loss=args.use_cycle_loss,
                                     use_discriminator=args.use_discriminator,
+                                    use_wgan_gp=args.use_wgan_gp,
+                                    n_critic=args.n_critic,
+                                    lambda_e=args.lambda_e,
                                     weight_decay=args.weight_decay,
                                     is_loadmodel=args.is_loadmodel,
                                     per_process_gpu_memory_fraction=args.per_process_gpu_memory_fraction,
