@@ -31,7 +31,7 @@ def residual_block(inputs, num_filters, kernel_size, dropout_rate, scope=None, o
                    scope="conv_block_" + str(1))
 
         net = conv(inputs=net, num_filters=num_filters, kernel_size=kernel_size, dropout_rate=dropout_rate,
-                   scope="conv_block_" + str(2), is_relu=True)
+                   scope="conv_block_" + str(2), is_relu=False)
 
         net = net + inputs
 

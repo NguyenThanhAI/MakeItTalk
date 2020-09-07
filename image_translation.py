@@ -105,11 +105,13 @@ class ImageTranslation(object):
         self.vgg_saver = tf.train.Saver(var_list=self.vgg_variables)
 
         with tf.name_scope("loss"):
+            self.vgg_regularization_loss = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in self.vgg_variables])
+            tf.summary.scalar("vgg regularization loss", self.vgg_regularization_loss)
             self.regularization_loss = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in self.generator_trainable_variables])
             tf.summary.scalar("regularization loss", self.regularization_loss)
             self.reconstruction_loss = l1_loss(source=self.target_image, predict=self.predicted_target_image)
             tf.summary.scalar("reconstruction loss", self.reconstruction_loss)
-            considered_end_points = ["vgg_19/conv1/conv1_2", "vgg_19/conv2/conv2_2", "vgg_19/conv3/conv3_3", "vgg_19/conv4/conv4_3", "vgg_19/conv5/conv5_3"]
+            considered_end_points = ["vgg_19/conv1/conv1_2", "vgg_19/conv2/conv2_2", "vgg_19/conv3/conv3_3", "vgg_19/conv4/conv4_3"]
             if not self.config.use_cycle_loss:
                 self.perceptual_loss = 0
                 for point in considered_end_points:
