@@ -124,7 +124,8 @@ def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_eps
     with slim.arg_scope([slim.conv2d],
                         weights_regularizer=slim.l2_regularizer(scale=weight_decay),
                         activation_fn=None,
-                        biases_initializer=None):
+                        biases_initializer=tf.zeros_initializer(),
+                        weights_initializer=tf.truncated_normal_initializer(stddev=0.01)):
         with slim.arg_scope([slim.batch_norm],
                             scale=True,
                             decay=batch_norm_decay,

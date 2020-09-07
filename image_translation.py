@@ -13,7 +13,7 @@ from inception_resnet_v1 import inference
 
 from ops import generator_arg_scope, generator_network
 from read_tfrecord import get_batch
-from losses import l1_loss
+from losses import l1_loss, l2_loss, wing_loss
 
 
 class ImageTranslationConfig(object):
@@ -54,6 +54,7 @@ class ImageTranslationConfig(object):
 class ImageTranslation(object):
     def  __init__(self, config: ImageTranslationConfig):
         self.config = config
+        tf.reset_default_graph()
         self.source_image, self.target_image, self.source_landmarks, self.target_landmarks, self.epoch_now = get_batch(tfrecord_path=self.config.dataset_path,
                                                                                                                        batch_size=self.config.batch_size,
                                                                                                                        num_epochs=self.config.num_epochs)
@@ -159,8 +160,8 @@ class ImageTranslation(object):
                                                                   decay_steps=self.config.decay_steps)
             tf.summary.scalar("learning rate", self.learning_rate)
             if self.config.optimizer.lower() == "adam":
-                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate)
-            elif self.config.optimizer.lower() == "rms" and self.config.optimizer.lower() == "rmsprop":
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate, beta1=0.5, beta2=0.9)
+            elif self.config.optimizer.lower() == "rms" or self.config.optimizer.lower() == "rmsprop":
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
             elif self.config.optimizer.lower() == "momentum":
                 self.optimizer = tf.train.MomentumOptimizer(learning_rate=self.learning_rate,
