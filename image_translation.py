@@ -119,7 +119,9 @@ class ImageTranslation(object):
                     self.perceptual_loss += l1_loss(source=self.output_perceptual_target_image[point],
                                                     predict=self.output_perceptual_predicted_target_image[point])
                 tf.summary.scalar("perceptual loss", self.perceptual_loss)
-                self.loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.regularization_loss
+                self.loss = tf.cond(tf.greater_equal(self.global_step, 2000),
+                                    lambda: self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.regularization_loss,
+                                    lambda: self.reconstruction_loss + self.config.weight_decay * self.regularization_loss)
                 tf.summary.scalar("total loss", self.loss)
             else:
                 self.perceptual_loss = 0
