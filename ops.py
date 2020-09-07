@@ -9,7 +9,7 @@ def conv(inputs, num_filters, kernel_size, stride=1,
          dropout_rate=None, scope=None, outputs_collections=None, is_relu=True):
     with tf.variable_scope(scope, "xx", [inputs]) as sc:
         net = slim.conv2d(inputs=inputs, num_outputs=num_filters, kernel_size=kernel_size, stride=stride)
-        net = slim.batch_norm(inputs=net)
+        net = slim.instance_norm(inputs=net)
 
         if is_relu:
             net = tf.nn.relu(net)
@@ -82,7 +82,7 @@ def generator_network(inputs, dropout_rate=None, is_training=True, reuse=None, s
     with tf.variable_scope(scope, "generator", [inputs], reuse=reuse) as sc:
         end_points_collection = sc.name + "_end_points"
 
-        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training), \
+        with slim.arg_scope([slim.dropout], is_training=is_training), \
             slim.arg_scope([slim.conv2d, conv, residual_block, residual_block_down, residual_block_up],
                            outputs_collections=end_points_collection), \
             slim.arg_scope([residual_block_down, residual_block_up], dropout_rate=dropout_rate):
@@ -120,16 +120,15 @@ def generator_network(inputs, dropout_rate=None, is_training=True, reuse=None, s
         return out, end_points
 
 
-def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_epsilon=1.1e-5):
+def generator_arg_scope(weight_decay=1e-4, instance_norm_epsilon=1.1e-5):
     with slim.arg_scope([slim.conv2d],
                         weights_regularizer=slim.l2_regularizer(scale=weight_decay),
                         activation_fn=None,
                         biases_initializer=tf.zeros_initializer(),
                         weights_initializer=tf.truncated_normal_initializer(stddev=0.01)):
-        with slim.arg_scope([slim.batch_norm],
+        with slim.arg_scope([slim.instance_norm],
                             scale=True,
-                            decay=batch_norm_decay,
-                            epsilon=batch_norm_epsilon) as scope:
+                            epsilon=instance_norm_epsilon) as scope:
             return scope
 
 
