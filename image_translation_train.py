@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument("--save_network_frequency", type=int, default=2500)
     parser.add_argument("--is_training", type=str2bool, default=True)
     parser.add_argument("--optimizer", type=str, default="adam")
+    parser.add_argument("--perceptual_steps", type=int, default=10000)
     parser.add_argument("--gpu_devices", type=str, default="1")
 
     args = parser.parse_args()
@@ -77,7 +78,8 @@ if __name__ == '__main__':
                                     summary_frequency=args.summary_frequency,
                                     save_network_frequency=args.save_network_frequency,
                                     is_training=args.is_training,
-                                    optimizer=args.optimizer)
+                                    optimizer=args.optimizer,
+                                    perceptual_steps=args.perceptual_steps)
 
     image_translation = ImageTranslation(config=config)
 

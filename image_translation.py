@@ -25,7 +25,7 @@ class ImageTranslationConfig(object):
                  vgg_model_dir="/thanhnc/vgg_19", vgg_checkpoint="vgg_19.ckpt", generator_checkpoint_name=None,
                  dataset_path="/thanhnc/VoxCeleb2/data/tfrecord/training.tfrecord", batch_size=8, num_epochs=100,
                  summary_frequency=10, save_network_frequency=10000,
-                 is_training=True, optimizer="adam"):
+                 is_training=True, optimizer="adam", perceptual_steps=10000):
         self.input_size = input_size
         self.learning_rate = learning_rate
         self.learning_rate_decay_type = learning_rate_decay_type
@@ -49,6 +49,7 @@ class ImageTranslationConfig(object):
         self.save_network_frequency = save_network_frequency
         self.is_training = is_training
         self.optimizer = optimizer
+        self.perceptual_steps = perceptual_steps
 
 
 class ImageTranslation(object):
@@ -60,11 +61,11 @@ class ImageTranslation(object):
                                                                                                                        num_epochs=self.config.num_epochs)
 
         with slim.arg_scope(generator_arg_scope()):
-            self.predicted_target_image, _ = generator_network(inputs=tf.concat([self.source_image, self.target_landmarks], axis=3),
+            self.predicted_target_image, _ = generator_network(input1=self.source_image, input2=self.target_landmarks,
                                                                is_training=self.config.is_training,
                                                                reuse=False, scope="image_translation_module")
             if self.config.use_cycle_loss:
-                self.predicted_source_image, _ = generator_network(inputs=tf.concat([self.predicted_target_image, self.source_landmarks], axis=3),
+                self.predicted_source_image, _ = generator_network(input1=self.predicted_target_image, input2=self.source_landmarks,
                                                                    is_training=self.config.is_training,
                                                                    reuse=True, scope="image_translation_module")
         #self.perceptual_target_image = tf.concat([self.target_image, self.predicted_target_image], axis=0)
@@ -112,14 +113,16 @@ class ImageTranslation(object):
             tf.summary.scalar("regularization loss", self.regularization_loss)
             self.reconstruction_loss = l1_loss(source=self.target_image, predict=self.predicted_target_image)
             tf.summary.scalar("reconstruction loss", self.reconstruction_loss)
-            considered_end_points = ["vgg_19/conv1/conv1_2", "vgg_19/conv2/conv2_2", "vgg_19/conv3/conv3_3", "vgg_19/conv4/conv4_3"]
+            considered_end_points = ["vgg_19/conv1/conv1_2", "vgg_19/conv2/conv2_2", "vgg_19/conv3/conv3_3"]
             if not self.config.use_cycle_loss:
                 self.perceptual_loss = 0
                 for point in considered_end_points:
                     self.perceptual_loss += l1_loss(source=self.output_perceptual_target_image[point],
                                                     predict=self.output_perceptual_predicted_target_image[point])
                 tf.summary.scalar("perceptual loss", self.perceptual_loss)
-                self.loss = self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.regularization_loss
+                self.loss = tf.cond(tf.greater_equal(self.global_step, self.config.perceptual_steps),
+                                    lambda: self.reconstruction_loss + self.config.lambda_a * self.perceptual_loss + self.config.weight_decay * self.regularization_loss,
+                                    lambda: self.reconstruction_loss + self.config.weight_decay * self.regularization_loss)
                 tf.summary.scalar("total loss", self.loss)
             else:
                 self.perceptual_loss = 0
