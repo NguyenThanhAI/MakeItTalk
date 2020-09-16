@@ -133,11 +133,11 @@ def generator_network(input1, input2, dropout_rate=None, is_training=True, reuse
 
             up_3 = deconv(inputs=up_2, num_filters=64, kernel_size=4, stride=2, scope="conv_up_3") # 256
 
-            change = conv(inputs=up_3, num_filters=3, kernel_size=7, stride=1, scope="conv_change") # 256
+            change = conv(inputs=up_3, num_filters=3, kernel_size=7, stride=1, scope="conv_change", is_relu=False) # 256 # Conv cuối phải bỏ relu trước khi qua tanh
 
             change = tf.nn.tanh(change) # 256
 
-            alpha = conv(inputs=up_3, num_filters=3, kernel_size=7, stride=1, scope="conv_alpha") # 256
+            alpha = conv(inputs=up_3, num_filters=3, kernel_size=7, stride=1, scope="conv_alpha", is_relu=False) # 256 # Conv cuối phải bỏ relu trước khi qua tanh
 
             alpha = tf.nn.sigmoid(alpha) # 256
 

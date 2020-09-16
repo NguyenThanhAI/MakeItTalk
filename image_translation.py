@@ -163,7 +163,7 @@ class ImageTranslation(object):
                                                                   decay_steps=self.config.decay_steps)
             tf.summary.scalar("learning rate", self.learning_rate)
             if self.config.optimizer.lower() == "adam":
-                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate, beta1=0.5, beta2=0.9)
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.config.learning_rate, beta1=0.5, beta2=0.999)
             elif self.config.optimizer.lower() == "rms" or self.config.optimizer.lower() == "rmsprop":
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
             elif self.config.optimizer.lower() == "momentum":
@@ -220,6 +220,7 @@ class ImageTranslation(object):
         summary = self.sess.run(self.merged)
 
         self.writer.add_summary(summary=summary, global_step=global_step)
+        self.writer.flush()
         print("Add summary at {}".format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
 
     def train(self):
