@@ -9,7 +9,7 @@ def conv(inputs, num_filters, kernel_size, stride=1,
          dropout_rate=None, scope=None, outputs_collections=None, is_relu=True):
     with tf.variable_scope(scope, "xx", [inputs]) as sc:
         net = slim.conv2d(inputs=inputs, num_outputs=num_filters, kernel_size=kernel_size, stride=stride)
-        net = slim.batch_norm(inputs=net)
+        net = slim.instance_norm(inputs=net)
 
         if is_relu:
             net = tf.nn.relu(net)
@@ -78,16 +78,16 @@ def residual_block_up(inputs, num_filters, kernel_size, dropout_rate, scope=None
     return net
 
 
-def generator_network(inputs, dropout_rate=None, is_training=True, reuse=None, scope=None):
-    with tf.variable_scope(scope, "generator", [inputs], reuse=reuse) as sc:
+def generator_network(input1, input2, dropout_rate=None, is_training=True, reuse=None, scope=None):
+    with tf.variable_scope(scope, "generator", [input1, input2], reuse=reuse) as sc:
         end_points_collection = sc.name + "_end_points"
 
-        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training), \
-            slim.arg_scope([slim.conv2d, conv, residual_block, residual_block_down, residual_block_up],
+        with slim.arg_scope([slim.dropout], is_training=is_training), \
+            slim.arg_scope([slim.conv2d, slim.conv2d_transpose, conv, residual_block, residual_block_down, residual_block_up],
                            outputs_collections=end_points_collection), \
-            slim.arg_scope([residual_block_down, residual_block_up], dropout_rate=dropout_rate):
+            slim.arg_scope([conv, residual_block, residual_block_down, residual_block_up], dropout_rate=dropout_rate):
 
-            net = inputs
+            net = tf.concat([input1, input2], axis=3)
 
             down_1 = residual_block_down(inputs=net, num_filters=64, kernel_size=3, scope="residual_block_down_" + str(1)) # 128
 
@@ -113,23 +113,30 @@ def generator_network(inputs, dropout_rate=None, is_training=True, reuse=None, s
 
             up_6 = residual_block_up(inputs=tf.concat([down_1, up_5], axis=-1), num_filters=3, kernel_size=3, scope="residual_block_up_" + str(6)) # 256
 
-            out = tf.nn.tanh(up_6)
+            change = conv(inputs=up_6, num_filters=3, kernel_size=7, stride=1, scope="conv_change", is_relu=False)  # 256 # Conv cuối phải bỏ relu trước khi qua tanh
+
+            change = tf.nn.tanh(change)  # 256
+
+            alpha = conv(inputs=up_6, num_filters=3, kernel_size=7, stride=1, scope="conv_alpha", is_relu=False)  # 256 # Conv cuối phải bỏ relu trước khi qua tanh
+
+            alpha = tf.nn.sigmoid(alpha)  # 256
+
+            out = (tf.ones_like(alpha) - alpha) * change + alpha * input1  # 256
 
             end_points = slim.utils.convert_collection_to_dict(end_points_collection)
 
         return out, end_points
 
 
-def generator_arg_scope(weight_decay=1e-4, batch_norm_decay=0.99, batch_norm_epsilon=1.1e-5):
+def generator_arg_scope(weight_decay=1e-4, instance_norm_epsilon=1.1e-5):
     with slim.arg_scope([slim.conv2d],
                         weights_regularizer=slim.l2_regularizer(scale=weight_decay),
                         activation_fn=None,
                         biases_initializer=tf.zeros_initializer(),
                         weights_initializer=tf.truncated_normal_initializer(stddev=0.01)):
-        with slim.arg_scope([slim.batch_norm],
+        with slim.arg_scope([slim.instance_norm],
                             scale=True,
-                            decay=batch_norm_decay,
-                            epsilon=batch_norm_epsilon) as scope:
+                            epsilon=instance_norm_epsilon) as scope:
             return scope
 
 

@@ -23,9 +23,10 @@ def str2bool(v):
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--videos_dir", type=str, default=r"K:\VoxCeleb2\vox2_test_mp4\mp4")
-    parser.add_argument("--saved_dir", type=str, default=r"K:\VoxCeleb2\data")
+    parser.add_argument("--videos_dir", type=str, default=r"D:\VoxCeleb2\vox2_mp4\dev\mp4")
+    parser.add_argument("--saved_dir", type=str, default=r"D:\VoxCeleb2\data")
     parser.add_argument("--out_image_size", type=str, default=256)
+    parser.add_argument("--num_pairs_per_video", type=int, default=5)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--show_image", type=str2bool, default=True)
 
@@ -53,79 +54,81 @@ if __name__ == '__main__':
 
         length = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        counts = 0
+        for i in range(args.num_pairs_per_video):
 
-        while True:
-            counts += 1
-            if counts == 100:
-                break
+            allowed_trys = 0
+
             while True:
-                source_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
-                target_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
-                if abs(target_index - source_index) > 0.8 * length:
+                allowed_trys += 1
+                if allowed_trys == 100:
                     break
+                while True:
+                    source_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
+                    target_index = np.random.choice(np.arange(length), size=1, replace=False)[0]
+                    if abs(target_index - source_index) > 0.4 * length:
+                        break
 
-            cap.set(cv2.CAP_PROP_POS_FRAMES, source_index)
-            ret, source_image = cap.read()
+                cap.set(cv2.CAP_PROP_POS_FRAMES, source_index)
+                ret, source_image = cap.read()
 
-            if not ret:
-                continue
+                if not ret:
+                    continue
 
-            cap.set(cv2.CAP_PROP_POS_FRAMES, target_index)
-            ret, target_image = cap.read()
+                cap.set(cv2.CAP_PROP_POS_FRAMES, target_index)
+                ret, target_image = cap.read()
 
-            if not ret:
-                continue
+                if not ret:
+                    continue
 
-            source_image = cv2.resize(source_image, dsize=(256, 256))
-            target_image = cv2.resize(target_image, dsize=(256, 256))
+                source_image = cv2.resize(source_image, dsize=(256, 256))
+                target_image = cv2.resize(target_image, dsize=(256, 256))
 
-            source_landmarks = 255 * np.ones_like(source_image)
-            try:
-                landmarks = face_al.get_landmarks_from_image(source_image)
-            except:
-                continue
-            if landmarks is None:
-                continue
-            if len(landmarks) != 1:
-                continue
-            for landmark in landmarks:
-                for part in PARTS:
-                    for line in part:
-                        cv2.line(source_landmarks, pt1=(int(landmark[line[0]][0]), int(landmark[line[0]][1])),
-                                 pt2=(int(landmark[line[1]][0]), int(landmark[line[1]][1])), color=COLORS[part],
-                                 thickness=1)
+                source_landmarks = 255 * np.ones_like(source_image)
+                try:
+                    landmarks = face_al.get_landmarks_from_image(source_image)
+                except:
+                    continue
+                if landmarks is None:
+                    continue
+                if len(landmarks) != 1:
+                    continue
+                for landmark in landmarks:
+                    for part in PARTS:
+                        for line in part:
+                            cv2.line(source_landmarks, pt1=(int(landmark[line[0]][0]), int(landmark[line[0]][1])),
+                                     pt2=(int(landmark[line[1]][0]), int(landmark[line[1]][1])), color=COLORS[part],
+                                     thickness=1)
 
-            target_landmarks = 255 * np.ones_like(target_image)
-            landmarks = face_al.get_landmarks_from_image(target_image)
-            if landmarks is None:
-                continue
-            if len(landmarks) != 1:
-                continue
-            for landmark in landmarks:
-                for part in PARTS:
-                    for line in part:
-                        cv2.line(target_landmarks, pt1=(int(landmark[line[0]][0]), int(landmark[line[0]][1])),
-                                 pt2=(int(landmark[line[1]][0]), int(landmark[line[1]][1])), color=COLORS[part],
-                                 thickness=1)
+                target_landmarks = 255 * np.ones_like(target_image)
+                landmarks = face_al.get_landmarks_from_image(target_image)
+                if landmarks is None:
+                    continue
+                if len(landmarks) != 1:
+                    continue
+                for landmark in landmarks:
+                    for part in PARTS:
+                        for line in part:
+                            cv2.line(target_landmarks, pt1=(int(landmark[line[0]][0]), int(landmark[line[0]][1])),
+                                     pt2=(int(landmark[line[1]][0]), int(landmark[line[1]][1])), color=COLORS[part],
+                                     thickness=1)
 
-            if args.show_image:
-                cv2.imshow("Source image", source_image)
-                cv2.imshow("Target image", target_image)
-                cv2.imshow("Source landmarks", source_landmarks)
-                cv2.imshow("Target landmarks", target_landmarks)
-                cv2.waitKey(200)
+                if args.show_image:
+                    cv2.imshow("Source image", source_image)
+                    cv2.imshow("Target image", target_image)
+                    cv2.imshow("Source landmarks", source_landmarks)
+                    cv2.imshow("Target landmarks", target_landmarks)
+                    cv2.waitKey(200)
 
-            rel_dir = os.path.relpath(video, args.videos_dir)
-            save_path = os.path.join(args.saved_dir, rel_dir)
-            save_dir = save_path.split(".")[0]
+                rel_dir = os.path.relpath(video, args.videos_dir)
+                save_path = os.path.join(args.saved_dir, rel_dir)
+                save_dir = os.path.join(save_path.split(".")[0], str(i))
 
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir, exist_ok=True)
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir, exist_ok=True)
 
-            cv2.imwrite(os.path.join(save_dir, "source_image.jpg"), source_image)
-            cv2.imwrite(os.path.join(save_dir, "source_landmarks.jpg"), source_landmarks)
-            cv2.imwrite(os.path.join(save_dir, "target_image.jpg"), target_image)
-            cv2.imwrite(os.path.join(save_dir, "target_landmarks.jpg"), target_landmarks)
+                cv2.imwrite(os.path.join(save_dir, "source_image.jpg"), source_image)
+                cv2.imwrite(os.path.join(save_dir, "source_landmarks.jpg"), source_landmarks)
+                cv2.imwrite(os.path.join(save_dir, "target_image.jpg"), target_image)
+                cv2.imwrite(os.path.join(save_dir, "target_landmarks.jpg"), target_landmarks)
 
-            break
+                break
